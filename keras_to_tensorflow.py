@@ -69,6 +69,8 @@ parser.add_argument('-num_outputs', action="store",
                     dest='num_outputs', type=int, default=1)
 parser.add_argument('-graph_def', action="store", 
                     dest='graph_def', type=bool, default=False)
+parser.add_argument('-graph_dnn', action="store", 
+                    dest='graph_dnn', type=bool, default=False)
 parser.add_argument('-output_node_prefix', action="store", 
                     dest='output_node_prefix', type=str, default='output_node')
 parser.add_argument('-quantize', action="store", 
@@ -111,7 +113,21 @@ else:
     K.set_image_data_format('channels_last')
 
 try:
-    net_model = load_model(weight_file_path)
+
+    import keras.losses
+    from losses import HybridLoss
+    keras.utils.generic_utils.get_custom_objects().update(
+        dict({"HybridLoss":HybridLoss})
+    )
+#    print(HybridLoss)
+#    keras.losses.custom_loss = HybridLoss
+#    net_model = load_model(weight_file_path,custom_objects={'HybridLoss':HybridLoss})
+    net_model=load_model(weight_file_path,compile=False)
+    net_model.summary()
+    for layer in net_model.layers:
+        print(layer.input)
+        print(layer.output)
+
 except ValueError as err:
     print('''Input file specified ({}) only holds the weights, and not the model defenition.
     Save the model using mode.save(filename.h5) which will contain the network architecture
@@ -121,13 +137,13 @@ except ValueError as err:
     Check the keras documentation for more details (https://keras.io/getting-started/faq/)'''
           .format(weight_file_path))
     raise err
-num_output = args.num_outputs
-pred = [None]*num_output
-pred_node_names = [None]*num_output
-for i in range(num_output):
-    pred_node_names[i] = args.output_node_prefix+str(i)
-    pred[i] = tf.identity(net_model.outputs[i], name=pred_node_names[i])
-print('output nodes names are: ', pred_node_names)
+#num_output = args.num_outputs
+#pred = [None]*num_output
+#pred_node_names = [None]*num_output
+#for i in range(num_output):
+#    pred_node_names[i] = args.output_node_prefix+str(i)
+#    pred[i] = tf.identity(net_model.outputs[i], name=pred_node_names[i])
+#print('output nodes names are: ', pred_node_names)
 
 
 # [optional] write graph definition in ascii
@@ -141,20 +157,27 @@ if args.graph_def:
     tf.train.write_graph(sess.graph.as_graph_def(), output_fld, f, as_text=True)
     print('saved the graph definition in ascii format at: ', str(Path(output_fld) / f))
 
+if args.graph_dnn:
+    f = args.output_graphdef_file 
+    saver = tf.train.Saver()
+    saver.save(sess,"out/"+args.input_model_file.replace(".hdf5",""))
+    print('saved the graph definition at: ', str(Path(output_fld) / f))
+    print([var.name for var in tf.global_variables()])
+    print([var.name for var in tf.model_variables()])
 
 # convert variables to constants and save
 
 # In[ ]:
 
-from tensorflow.python.framework import graph_util
-from tensorflow.python.framework import graph_io
-if args.quantize:
-    from tensorflow.tools.graph_transforms import TransformGraph
-    transforms = ["quantize_weights", "quantize_nodes"]
-    transformed_graph_def = TransformGraph(sess.graph.as_graph_def(), [], pred_node_names, transforms)
-    constant_graph = graph_util.convert_variables_to_constants(sess, transformed_graph_def, pred_node_names)
-else:
-    constant_graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), pred_node_names)    
-graph_io.write_graph(constant_graph, output_fld, args.output_model_file, as_text=False)
-print('saved the freezed graph (ready for inference) at: ', str(Path(output_fld) / args.output_model_file))
+#from tensorflow.python.framework import graph_util
+#from tensorflow.python.framework import graph_io
+#if args.quantize:
+#    from tensorflow.tools.graph_transforms import TransformGraph
+#    transforms = ["quantize_weights", "quantize_nodes"]
+#    transformed_graph_def = TransformGraph(sess.graph.as_graph_def(), [], pred_node_names, transforms)
+#    constant_graph = graph_util.convert_variables_to_constants(sess, transformed_graph_def, pred_node_names)
+#else:
+#    constant_graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), pred_node_names)    
+#graph_io.write_graph(constant_graph, output_fld, args.output_model_file, as_text=False)
+#print('saved the freezed graph (ready for inference) at: ', str(Path(output_fld) / args.output_model_file))
 
