@@ -162,8 +162,14 @@ if args.graph_dnn:
     saver = tf.train.Saver()
     saver.save(sess,"out/"+args.input_model_file.replace(".hdf5",""))
     print('saved the graph definition at: ', str(Path(output_fld) / f))
+
+    outputs = ["ffwd_out/BiasAdd"] # names of output operations you want to use later
+    constant_graph = tf.graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), outputs)
+    tf.train.write_graph(constant_graph, "out/", args.input_model_file.replace(".hdf5",".pb"), as_text=False)
+
     print([var.name for var in tf.global_variables()])
     print([var.name for var in tf.model_variables()])
+
 
 # convert variables to constants and save
 
