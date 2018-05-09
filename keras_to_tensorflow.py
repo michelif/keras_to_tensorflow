@@ -114,11 +114,11 @@ else:
 
 try:
 
-    import keras.losses
-    from losses import HybridLoss
-    keras.utils.generic_utils.get_custom_objects().update(
-        dict({"HybridLoss":HybridLoss})
-    )
+#    import keras.losses
+#    from losses import HybridLoss
+#    keras.utils.generic_utils.get_custom_objects().update(
+#        dict({"HybridLoss":HybridLoss})
+#    )
 #    print(HybridLoss)
 #    keras.losses.custom_loss = HybridLoss
 #    net_model = load_model(weight_file_path,custom_objects={'HybridLoss':HybridLoss})

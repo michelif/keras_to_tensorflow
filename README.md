@@ -1,3 +1,6 @@
+#conversion of b-regression for HHbbgg
+in 94X:
+python3 keras_to_tensorflow.py -input_model_file model-09.hdf5 -graph_dnn=True 
 # keras_to_tensorflow
 General code to convert a trained keras model into an inference tensorflow model
 
